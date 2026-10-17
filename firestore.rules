@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['id', 'username', 'email', 'accentColor', 'customCursor', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'username', 'email', 'accentColor', 'customCursor', 'createdAt', 'updatedAt'])
+        && data.id == userId
+        && data.username is string && data.username.size() >= 1 && data.username.size() <= 50
+        && data.email is string && data.email.size() <= 100
+        && data.accentColor is string && (data.accentColor == 'emerald' || data.accentColor == 'cyan' || data.accentColor == 'amber' || data.accentColor == 'pink' || data.accentColor == 'purple')
+        && data.customCursor is bool;
+    }
+
+    function isValidLessonFolder(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'lessonId', 'name', 'cardCount', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'lessonId', 'name', 'cardCount', 'lastPercentage', 'lastPlayedAt', 'createdAt', 'updatedAt'])
+        && data.userId == userId
+        && data.id is string && isValidId(data.id)
+        && data.lessonId is int && data.lessonId >= 1 && data.lessonId <= 10
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.cardCount is int && data.cardCount >= 0
+        && (!('lastPercentage' in data) || data.lastPercentage == null || (data.lastPercentage is number && data.lastPercentage >= 0 && data.lastPercentage <= 100));
+    }
+
+    function isValidFlashcard(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'folderId', 'lessonId', 'question', 'answer', 'lastResult', 'lastTimeSpentMs', 'playCount', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'folderId', 'lessonId', 'question', 'answer', 'lastResult', 'lastTimeSpentMs', 'playCount', 'createdAt', 'updatedAt'])
+        && data.userId == userId
+        && data.id is string && isValidId(data.id)
+        && data.folderId is string && isValidId(data.folderId)
+        && data.lessonId is int && data.lessonId >= 1 && data.lessonId <= 10
+        && data.question is string && data.question.size() >= 1 && data.question.size() <= 3000
+        && data.answer is string && data.answer.size() >= 1 && data.answer.size() <= 3000
+        && data.lastResult is string && (data.lastResult == 'correct' || data.lastResult == 'wrong' || data.lastResult == 'unplayed')
+        && data.lastTimeSpentMs is number && data.lastTimeSpentMs >= 0
+        && data.playCount is int && data.playCount >= 0;
+    }
+
+    // User Profile
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId)
+        && incoming().id == existing().id;
+      allow delete: if false;
+
+      // Subtopic folders created by this user
+      match /folders/{folderId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(folderId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(folderId) && isValidLessonFolder(incoming(), userId)
+          && incoming().id == folderId;
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(folderId) && isValidLessonFolder(incoming(), userId)
+          && incoming().id == existing().id && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(folderId);
+      }
+
+      // Flashcards created by this user
+      match /cards/{cardId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(cardId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(cardId) && isValidFlashcard(incoming(), userId)
+          && incoming().id == cardId;
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(cardId) && isValidFlashcard(incoming(), userId)
+          && incoming().id == existing().id && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(cardId);
+      }
+    }
+  }
+}

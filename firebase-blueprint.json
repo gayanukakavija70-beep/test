@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile settings and preferences",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user ID matching auth.uid" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 50, "description": "User chosen display name" },
+        "email": { "type": "string", "maxLength": 100, "description": "User email address" },
+        "accentColor": { "type": "string", "enum": ["emerald", "cyan", "amber", "pink", "purple"], "description": "Selected theme accent color" },
+        "customCursor": { "type": "boolean", "description": "Whether the biological cell cursor is enabled" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["id", "username", "email", "accentColor", "customCursor", "createdAt", "updatedAt"]
+    },
+    "LessonFolder": {
+      "title": "LessonFolder",
+      "description": "A subtopic deck folder under one of the 10 biology lessons",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique folder document ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "lessonId": { "type": "integer", "description": "Lesson index from 1 to 10" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100, "description": "Folder name" },
+        "cardCount": { "type": "integer", "description": "Cached total cards in folder" },
+        "lastPercentage": { "type": "number", "description": "Percentage score from most recent game, or null if unplayed" },
+        "lastPlayedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last study session" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["id", "userId", "lessonId", "name", "cardCount", "createdAt", "updatedAt"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "An individual flashcard containing question and answer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique flashcard document ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "folderId": { "type": "string", "description": "Parent folder ID" },
+        "lessonId": { "type": "integer", "description": "Parent lesson index 1 to 10" },
+        "question": { "type": "string", "minLength": 1, "maxLength": 3000, "description": "Card question prompt" },
+        "answer": { "type": "string", "minLength": 1, "maxLength": 3000, "description": "Card answer text" },
+        "lastResult": { "type": "string", "enum": ["correct", "wrong", "unplayed"], "description": "Result of last review" },
+        "lastTimeSpentMs": { "type": "number", "description": "Time spent in ms on last review" },
+        "playCount": { "type": "integer", "description": "Total times card has been played" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["id", "userId", "folderId", "lessonId", "question", "answer", "lastResult", "lastTimeSpentMs", "playCount", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data and settings"
+    },
+    "/users/{userId}/folders/{folderId}": {
+      "schema": "LessonFolder",
+      "description": "Folders created by the user within biological lessons"
+    },
+    "/users/{userId}/cards/{cardId}": {
+      "schema": "Flashcard",
+      "description": "Flashcards created by the user"
+    }
+  }
+}

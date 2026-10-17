@@ -1,0 +1,6 @@
+{
+  "name": "KG Recall",
+  "description": "Decode Biology, Deck by Deck. A manga-styled biology flashcard application in Sinhala with real-time cross-device sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
